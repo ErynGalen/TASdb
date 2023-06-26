@@ -1,0 +1,20 @@
+# Organization of the file:
+# [mod_name]
+# [mod_name.category1]
+# <level info>
+# [mod_name.category2]
+# ...
+
+# level info:
+# required: file = "xxx.tas", stats = {frames: xxx}
+# optional: names = ["1", "100"]
+
+
+[classic]
+[classic.any.100m]
+file = "TAS1.tas"
+names = ["1", "100"]
+stats = { frames = 42 }
+
+[classic.any]
+200m = { file = "TAS2.tas", stats = { frames = 53 } }
