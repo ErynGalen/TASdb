@@ -21,5 +21,13 @@ def test2():
             for level in json_data[game][category]:
                 print(game, category, level)
 
+def test3():
+    print("----- test3 -----")
+    req = requests.post("http://127.0.0.1:7878/file?game=classic&category=any&level=1", "new file content (not a valid tas :)")
+    print(req.json())
+
 test1()
 test2()
+
+test3()
+test1()

@@ -13,7 +13,6 @@ server.listen(port, hostname, () => {
 
 async function requestHandler(req, res) {
     res.setHeader('Content-Type', 'application/json');
-
     fs.readFile(__dirname + "/storage/db.toml", 'utf-8', (err, content) => {
         if (err) {
             console.error(err);
@@ -22,25 +21,33 @@ async function requestHandler(req, res) {
             res.end(JSON.stringify({ error: err }));
             return;
         }
-        dbRequest(req, res, content);
+
+        let database;
+        try {
+            database = toml.parse(content);
+        } catch (e) {
+            let message = "Error parsing database";
+            console.error(message + " at (" + e.line + ":" + e.column + "): " + e.message);
+
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: message }));
+            return;
+        }
+
+        if (req.method == 'GET') {
+            dbGet(req, res, database);
+        } else if (req.method == 'POST') {
+            dbPost(req, res, database);
+        } else {
+            res.statusCode = 501;
+            res.end(JSON.stringify({ error: "Only POST and GET methods are accepted" }));
+            return;
+        }
     });
-
-
 }
 
-async function dbRequest(req, res, db_file) {
-    let database;
-    try {
-        database = toml.parse(db_file);
-    } catch (e) {
-        let message = "Error parsing database";
-        console.error(message + " at (" + e.line + ":" + e.column + "): " + e.message);
-
-        res.statusCode = 500;
-        res.end(JSON.stringify({ error: message }));
-        return;
-    }
-
+// GET
+async function dbGet(req, res, database) {
     res.statusCode = 200;
     let req_url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -81,12 +88,10 @@ async function dbRequest(req, res, db_file) {
                 }));
             })
             return;
-
-        default:
-            req.statusCode = 404;
-            res.end(JSON.stringify({ error: "Invalid request: " + req_url.pathname }));
-            return;
     }
+    req.statusCode = 404;
+    res.end(JSON.stringify({ error: "Invalid request: " + req_url.pathname }));
+    return;
 }
 
 async function dbGetFileInfo(db, game, category, level) {
@@ -114,3 +119,82 @@ async function dbGetFileInfo(db, game, category, level) {
 }
 
 
+// POST
+async function dbPost(req, res, database) {
+    if (req.headers['content-type'] && req.headers['content-type'] != "text/plain") {
+        res.statusCode = 415;
+        res.end(JSON.stringify({ error: "Only plain text data is accepted, got " + req.headers['content-type'] }));
+        return;
+    }
+
+    let body = "";
+    req.on('data', data => { body += data; });
+    req.on('end', () => dbPostData(req, res, database, body));
+}
+async function dbPostData(req, res, database, data) {
+    res.statusCode = 200;
+    let req_url = new URL(req.url, `http://${req.headers.host}`);
+
+    switch (req_url.pathname) {
+        case "/file":
+            let params = req_url.searchParams;
+            let game = params.get("game");
+            let category = params.get("category");
+            let level = params.get("level");
+            if (!game || !category || !level) {
+                req.statusCode = 400;
+                res.end(JSON.stringify({ error: "game, category and level must be specified" }));
+                return;
+            }
+            let result = await dbSaveFile(database, game, category, level, data);
+            if (result.error) {
+                res.statusCode = 404;
+            }
+            res.end(JSON.stringify(result));
+            return;
+    }
+
+    req.statusCode = 404;
+    res.end(JSON.stringify({ error: "Invalid request: " + req_url.pathname }));
+    return;
+}
+
+async function dbSaveFile(db, game, category, level, content) {
+    let game_data = db[game];
+    if (!game_data) {
+        return { error: "Game not found: " + game };
+    }
+    let category_data = game_data[category];
+    if (!category_data) {
+        return { error: "Category not found: " + category };
+    }
+
+    for (let level_id in category_data) {
+        if (level_id == level) {
+            let error = await saveFile(game, category, category_data[level_id].file, content);
+            if (error) {
+                return { error: "Couldn't save file" };
+            }
+            return { status: "File saved" };
+        }
+        let names = category_data[level_id].names;
+        for (let nth_name in names) {
+            if (names[nth_name] == level) {
+                let error = await saveFile(game, category, category_data[level_id].file, content);
+                if (error) {
+                    return { error: "Couldn't save file" };
+                }
+                return { status: "File saved" };
+            }
+        }
+    }
+    return { error: "Level not found: " + level };
+}
+async function saveFile(game, category, file_name, content) {
+    let file_path = "/" + game + "/" + category + "/" + file_name;
+    let error = null
+    fs.writeFile(__dirname + "/storage" + file_path, content, err => {
+        error = err;
+    })
+    return error;
+}
