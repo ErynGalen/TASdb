@@ -10,7 +10,8 @@ def test1():
         return
     
     print("got this tas file:", json_data["content"])
-    print("file is supposed to be", json_data["stats"]["frames"], "frames")
+    if "frames" in json_data["stats"]:
+        print("file is supposed to be", json_data["stats"]["frames"], "frames")
 
 def test2():
     print("----- test2 -----")

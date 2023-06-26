@@ -2,6 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const toml = require('toml');
 
+const tas = require('./tas');
+
 const hostname = '127.0.0.1';
 const port = 7878;
 
@@ -74,18 +76,34 @@ async function dbGet(req, res, database) {
                 return;
             }
 
-            let file_path = "/" + game + "/" + category + "/" + file_info.file
+            let file_path = __dirname + "/storage" + "/" + game + "/" + category + "/" + file_info.file
 
-            fs.readFile(__dirname + "/storage" + file_path, (err, content) => {
+            fs.readFile(file_path, (err, content) => {
                 if (err) {
                     res.statusCode = 404;
-                    res.end(JSON.stringify({ error: "Error when opening input file (the file is probably missing" }));
+                    res.end(JSON.stringify({ error: "Error when opening input file (the file is probably missing)" }));
                     return;
                 }
-                res.end(JSON.stringify({
-                    stats: file_info.stats,
-                    content: content.toString(),
-                }));
+                fs.readFile(file_path + ".stats", (stats_err, stats_content) => {
+                    let stats;
+                    if (stats_err) {
+                        stats = { error: "Error when opening stats file (the file is probably missing)" };
+                    } else {
+                        try {
+                            stats = JSON.parse(stats_content);
+                        } catch (stats_parse_e) {
+                            console.error("Couldn't parse " + file_path + ".stats: " + stats_parse_e);
+
+                            res.statusCode = 500;
+                            res.end(JSON.stringify({ error: "Couldn't parse stats: " + stats_parse_e }));
+                            return;
+                        }
+                    }
+                    res.end(JSON.stringify({
+                        stats: stats,
+                        content: content.toString(),
+                    }));
+                })
             })
             return;
     }
@@ -169,28 +187,35 @@ async function dbSaveFile(db, game, category, level, content) {
         return { error: "Category not found: " + category };
     }
 
-    for (let level_id in category_data) {
+    let found_level_id = null;
+    look_for_level_id: for (let level_id in category_data) {
         if (level_id == level) {
-            let error = await saveFile(game, category, category_data[level_id].file, content);
-            if (error) {
-                return { error: "Couldn't save file" };
-            }
-            return { status: "File saved" };
+            found_level_id = level;
+            break look_for_level_id;
         }
         let names = category_data[level_id].names;
         for (let nth_name in names) {
             if (names[nth_name] == level) {
-                let error = await saveFile(game, category, category_data[level_id].file, content);
-                if (error) {
-                    return { error: "Couldn't save file" };
-                }
-                return { status: "File saved" };
+                found_level_id = level_id;
+                break look_for_level_id;
             }
         }
     }
+    if (found_level_id) {
+        let error = await saveFileRaw(game, category, category_data[found_level_id].file, content);
+        if (error) {
+            return { error: "Couldn't save file" };
+        }
+        let stats = tas.getStats(content);
+        let stats_error = await saveFileRaw(game, category, category_data[found_level_id].file + ".stats", JSON.stringify(stats));
+        if (stats_error) {
+            return { error: "Couldn't save file stats" };
+        }
+        return { status: "File saved" };
+    }
     return { error: "Level not found: " + level };
 }
-async function saveFile(game, category, file_name, content) {
+async function saveFileRaw(game, category, file_name, content) {
     let file_path = "/" + game + "/" + category + "/" + file_name;
     let error = null
     fs.writeFile(__dirname + "/storage" + file_path, content, err => {
@@ -198,3 +223,4 @@ async function saveFile(game, category, file_name, content) {
     })
     return error;
 }
+

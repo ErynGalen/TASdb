@@ -6,7 +6,7 @@
 # ...
 
 # level info:
-# required: file = "xxx.tas", stats = {frames: xxx}
+# required: file = "xxx.tas"
 # optional: names = ["1", "100"]
 
 
@@ -14,7 +14,6 @@
 [classic.any.100m]
 file = "TAS1.tas"
 names = ["1", "100"]
-stats = { frames = 42 }
 
 [classic.any]
-200m = { file = "TAS2.tas", stats = { frames = 53 } }
+200m = { file = "TAS2.tas" }
