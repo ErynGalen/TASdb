@@ -1,0 +1,21 @@
+{
+  "name": "tasdb",
+  "version": "1.0.0",
+  "description": "A database for tas files.",
+  "main": "server2.js",
+  "type": "module",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/server2.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.3.2",
+    "typescript": "^5.1.3"
+  }
+}
