@@ -1,2 +1,2 @@
-TAS1.tas, 100m, 100, 2 = f:42, j:3, dash: 4
-TAS2.tas, 200m, 200, 2 = f:26, j:2, dash: 55
+TAS1.tas, 100m, 100, 1
+TAS2.tas, 200m, 200, 2
