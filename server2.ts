@@ -2,13 +2,14 @@ import * as http from 'http';
 import * as fs from 'fs/promises'
 
 import { parseTasFileList, LevelInfo, levelIdInList } from './tas.js';
+import { getFileNameFromPath, getStoragePath, getBaseDir } from './database.js'
 
 const hostname = '127.0.0.1';
 const port = 7878;
 
 const server = http.createServer(requestHandler);
 
-server.listen(port, hostname, function () {
+server.listen(port, function () {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
 
@@ -29,13 +30,6 @@ async function requestHandler(req: http.IncomingMessage, res: http.ServerRespons
     return;
 }
 
-function getBaseDir(): string {
-    let base_url = new URL('..', import.meta.url);
-    return base_url.pathname;
-}
-function getStoragePath(): string {
-    return getBaseDir() + "storage/";
-}
 
 async function handleGet(req: http.IncomingMessage, res: http.ServerResponse) {
     let req_url: URL;
@@ -106,79 +100,36 @@ async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boo
 }
 
 async function getFile(res: http.ServerResponse, path: string[]) {
-    let game: string | null = path[0];
-    let category: string | null = path[1];
-    let level: string | null = path[2];
-    if (!game || !category || !level) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: "game, category and level must be specified" }));
+    let file_path: string;
+    try {
+        file_path = await getFileNameFromPath(path);
+    } catch (e: any) {
+        if (e.status) {
+            res.statusCode = e.status;
+        } else {
+            res.statusCode = 418;
+        }
+        res.end(JSON.stringify({ error: e.error }));
         return;
     }
-    let files_info_buffer: Buffer;
+
+    let file_content: string;
     try {
-        files_info_buffer = await fs.readFile(getStoragePath() + `${game}/${category}/${game}-${category}.txt`)
+        file_content = (await fs.readFile(getStoragePath() + file_path)).toString();
     } catch (e) {
         res.statusCode = 404;
-        res.end(JSON.stringify({ error: "Error while reading category informations (file probably missing)" }));
+        res.end(JSON.stringify({ error: "Error while reading level file (file probably missing)" }));
         return;
     }
-    let levels_info: LevelInfo[] = parseTasFileList(files_info_buffer.toString());
-
-    let level_id = levelIdInList(levels_info, level);
-    if (level_id !== null) {
-        let file_content: string;
-        try {
-            file_content = (await fs.readFile(getStoragePath() + `${game}/${category}/${levels_info[level_id].file}`)).toString();
-        } catch (e) {
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: "Error while reading level file (file probably missing)" }));
-            return;
-        }
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', 'inline; filename="' + levels_info[level_id].file + '"');
-        res.end(file_content);
-        return;
-    } else {
-        res.statusCode = 404;
-        res.end(JSON.stringify({ error: "Level not found: " + level }));
-        return;
-    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', 'inline; filename="' + file_path + '"');
+    res.end(file_content);
+    return;
 }
 
 async function getStats(res: http.ServerResponse, path: string[]) {
-    let game: string | null = path[0];
-    let category: string | null = path[1];
-    let level: string | null = path[2];
-    if (!game || !category) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: "game and category must be specified" }));
-        return;
-    }
-    let files_info_buffer: Buffer;
-    try {
-        files_info_buffer = await fs.readFile(getStoragePath() + `${game}/${category}/${game}-${category}.txt`)
-    } catch (e) {
-        res.statusCode = 404;
-        res.end(JSON.stringify({ error: "Error while reading category informations (file probably missing)" }));
-        return;
-    }
-    let levels_info: LevelInfo[] = parseTasFileList(files_info_buffer.toString());
-
-    if (level) {
-        let level_id = levelIdInList(levels_info, level);
-        if (level_id !== null) {
-            res.statusCode = 200;
-            res.end(JSON.stringify(levels_info[level_id]));
-            return;
-        } else {
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: "Level not found: " + level }));
-            return;
-        }
-    } else {
-        res.statusCode = 200;
-        res.end(JSON.stringify(levels_info));
-        return;
-    }
+    res.statusCode = 200;
+    res.end(JSON.stringify({ info: "No stats" }));
+    return;
 }
