@@ -1,0 +1,31 @@
+* {
+    background-color: black;
+    color: lightblue;
+}
+
+body {
+    margin: auto;
+    max-width: 960px;
+}
+
+div, input, form {
+    padding: 3px;
+}
+
+input {
+    margin: 2px;
+    border-color: yellow;
+    border-radius: 5px;
+}
+
+.input-field {
+    float: right;
+    width: 20ch;
+}
+.input-name {
+    float: left;
+    width: 10ch;
+}
+.input-row {
+    overflow: hidden;
+}

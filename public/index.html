@@ -1,8 +1,69 @@
+<!DOCTYPE html>
 <html>
-    <head>
-        <title>TASdb</title>
-    </head>
-    <body>
-        TAS database.
-    </body>
+
+<head>
+    <title>TASdb</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript">
+        async function stats() {
+            let response_elem = document.getElementById("response");
+            let p = params();
+            let response = await (await fetch(`stats/${p.game}/${p.category}/${p.level}`)).json();
+            if (response.error) {
+                response_elem.innerHTML = "<strong>Error: " + "</strong>" + response.error;
+                return;
+            }
+            response_elem.innerHTML = JSON.stringify(response);
+        }
+        async function file() {
+            let response_elem = document.getElementById("response");
+            let p = params();
+            let raw_response = await fetch(`file/${p.game}/${p.category}/${p.level}`);
+            if (raw_response.ok) {
+                window.location.href = `file/${p.game}/${p.category}/${p.level}`;
+            } else {
+                let response = await raw_response.json();
+                if (response.error) {
+                    response_elem.innerHTML = "<strong>Error: " + "</strong>" + response.error;
+                    return;
+                }
+                response_elem.innerHTML = "<strong>Unexcpected: " + "</strong>" + JSON.stringify(response);
+            }
+
+        }
+        function params() {
+            return {
+                game: document.getElementById("game").value,
+                category: document.getElementById("category").value,
+                level: document.getElementById("level").value,
+            };
+        }
+    </script>
+
+</head>
+
+<body>
+    <h1>TAS database.</h1>
+    <form style="width: 40ch;">
+        <div class="input-row">
+            <label for="game" class="input-name">Game: </label>
+            <input type="text" name="game" id="game" class="input-field">
+        </div>
+        <div class="input-row">
+            <label for="category" class="input-name">Category: </label>
+            <input type="text" name="category" id="category" class="input-field">
+        </div>
+        <div class="input-row">
+            <label for="level" class="input-name">Level: </label>
+            <input type="text" name="level" id="level" class="input-field">
+        </div>
+
+        <div>
+            <input type="button" value="File" onclick="file();">
+            <input type="button" value="Stats" onclick="stats();">
+        </div>
+    </form>
+    <pre id="response"></pre>
+</body>
+
 </html>

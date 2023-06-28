@@ -58,39 +58,59 @@ async function handleGet(req: http.IncomingMessage, res: http.ServerResponse) {
         }
     }
     if (path_parts.length == 0) {
-        let index_html;
-        try {
-            index_html = await fs.readFile(getBaseDir() + "/public/index.html");
-        }
-        catch (e) {
-            req.statusCode = 500;
-            res.end(JSON.stringify({ error: "cannot open index file" }));
-            return;
-        }
-        res.setHeader('Content-Type', 'text/html');
-        res.end(index_html.toString());
+        serveWebFile(res, req_url);
         return;
     }
 
     switch (path_parts[0]) {
         case 'file':
-            getFile(req, res, path_parts.slice(1));
+            getFile(res, path_parts.slice(1));
             return;
         case 'stats':
-            getStats(req, res, path_parts.slice(1));
+            getStats(res, path_parts.slice(1));
             return;
         default:
-            res.statusCode = 418;
-            res.end(JSON.stringify({ error: req_url.pathname + " isn't a valid request" }));
+            serveWebFile(res, req_url);
             return;
     }
 }
-async function getFile(req: http.IncomingMessage, res: http.ServerResponse, path: string[]) {
+
+// true on success
+async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boolean> {
+    let file_name = req_url.pathname;
+    if (file_name === '/' || file_name === '') {
+        file_name = "/index.html";
+    }
+
+    let file;
+    try {
+        file = await fs.readFile(getBaseDir() + "/public" + file_name);
+    }
+    catch (e) {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'text/plain');
+        res.end("not found");
+        return false;
+    }
+
+    if (file_name.endsWith(".html")) {
+        res.setHeader('Content-Type', 'text/html');
+    } else if (file_name.endsWith(".css")) {
+        res.setHeader('Content-Type', 'text/css');
+    } else {
+        console.error("Unsupported file type: " + file_name);
+        res.setHeader('Content-Type', 'text/plain');
+    }
+    res.end(file.toString());
+    return true;
+}
+
+async function getFile(res: http.ServerResponse, path: string[]) {
     let game: string | null = path[0];
     let category: string | null = path[1];
     let level: string | null = path[2];
     if (!game || !category || !level) {
-        req.statusCode = 400;
+        res.statusCode = 400;
         res.end(JSON.stringify({ error: "game, category and level must be specified" }));
         return;
     }
@@ -126,12 +146,12 @@ async function getFile(req: http.IncomingMessage, res: http.ServerResponse, path
     }
 }
 
-async function getStats(req: http.IncomingMessage, res: http.ServerResponse, path: string[]) {
+async function getStats(res: http.ServerResponse, path: string[]) {
     let game: string | null = path[0];
     let category: string | null = path[1];
     let level: string | null = path[2];
     if (!game || !category) {
-        req.statusCode = 400;
+        res.statusCode = 400;
         res.end(JSON.stringify({ error: "game and category must be specified" }));
         return;
     }
