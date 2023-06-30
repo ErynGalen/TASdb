@@ -1,8 +1,7 @@
 import * as http from 'http';
 import * as fs from 'fs/promises'
 
-import { parseTasFileList, LevelInfo, levelIdInList } from './tas.js';
-import { getFileNameFromPath, getStoragePath, getBaseDir } from './database.js'
+import { getStoragePath, getBaseDir, realPath } from './database.js'
 
 const hostname = '127.0.0.1';
 const port = 7878;
@@ -100,9 +99,9 @@ async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boo
 }
 
 async function getFile(res: http.ServerResponse, path: string[]) {
-    let file_path: string;
+    let file_path: string[];
     try {
-        file_path = await getFileNameFromPath(path);
+        file_path = await realPath(path);
     } catch (e: any) {
         if (e.status) {
             res.statusCode = e.status;
@@ -115,10 +114,10 @@ async function getFile(res: http.ServerResponse, path: string[]) {
 
     let file_content: string;
     try {
-        file_content = (await fs.readFile(getStoragePath() + file_path)).toString();
+        file_content = (await fs.readFile(getStoragePath() + file_path.join('/'))).toString();
     } catch (e) {
         res.statusCode = 404;
-        res.end(JSON.stringify({ error: "Error while reading level file (file probably missing)" }));
+        res.end(JSON.stringify({ error: "Error while reading level file (file probably missing): " + file_path.join('/') }));
         return;
     }
     res.statusCode = 200;
