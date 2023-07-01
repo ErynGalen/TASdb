@@ -3,6 +3,7 @@
 
 <head>
     <title>TASdb</title>
+    <link rel="icon" href="maddy.png">
     <link rel="stylesheet" href="style.css">
     <script type="text/javascript">
         async function get_stats() {
@@ -45,9 +46,9 @@
                 if (item.is_directory === true) {
                     prefix = '/';
                 }
-                    html_info += "<strong>" + prefix + item.id + "</strong> (";
-                    html_info += item.names.join(', ');
-                    html_info += ")<br>";
+                html_info += "<strong>" + prefix + item.id + "</strong> (";
+                html_info += item.names.join(', ');
+                html_info += ")<br>";
             }
             response_elem.innerHTML = html_info;
         }
@@ -85,7 +86,9 @@
             <input type="button" value="Info" onclick="get_info();">
         </div>
     </form>
-    <pre id="response"></pre>
+    <div>
+        <pre><output id="response"></output></pre>
+    </div>
 </body>
 
 </html>

@@ -1,5 +1,6 @@
-import * as http from 'http';
-import * as fs from 'fs/promises'
+import http from 'http';
+import fs from 'fs/promises';
+import mime from 'mime';
 
 import { getStoragePath, getBaseDir, realPath, getConfigInDir } from './database.js'
 import { ConfigLine } from './config_file.js';
@@ -21,6 +22,7 @@ async function requestHandler(req: http.IncomingMessage, res: http.ServerRespons
             handleGet(req, res);
             break;
         case 'POST':
+            handlePost(req, res);
             break;
         default:
             res.statusCode = 501;
@@ -90,15 +92,12 @@ async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boo
         return false;
     }
 
-    if (file_name.endsWith(".html")) {
-        res.setHeader('Content-Type', 'text/html');
-    } else if (file_name.endsWith(".css")) {
-        res.setHeader('Content-Type', 'text/css');
-    } else {
-        console.error("Unsupported file type: " + file_name);
-        res.setHeader('Content-Type', 'text/plain');
+    let mime_type: string | null = mime.getType(file_name);
+    if (!mime_type) {
+        mime_type = 'application/octet-stream';
     }
-    res.end(file.toString());
+    res.setHeader('Content-Type', mime_type);
+    res.end(file);
     return true;
 }
 
@@ -164,4 +163,8 @@ async function getInfo(res: http.ServerResponse, path: string[]) {
     }
     res.statusCode = 200;
     res.end(JSON.stringify(config));
+}
+
+async function handlePost(req: http.IncomingMessage, res: http.ServerResponse) {
+
 }
