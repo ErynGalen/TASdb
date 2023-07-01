@@ -12,17 +12,20 @@ div, input, form {
     padding: 3px;
 }
 
-input {
+input, textarea {
     margin: 2px;
     border-color: yellow;
     border-radius: 5px;
+    padding-left: 5px;
+    padding-right: 3px;
 }
 
 form {
     border-style: solid;
-    border-width: 1px;
+    border-width: 2px;
     border-radius: 5px;
     border-color: lightcyan;
+    margin: 3px;
 }
 
 .input-field {

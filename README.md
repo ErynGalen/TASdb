@@ -15,9 +15,10 @@ The database respond to requests with JSON data.
 The possible `GET` requests are:
 * `/file/<game>/<category>/<level>`: returns the file specified by game, category and level name.
 * `/file/<game>/<category>/<level>.d/<n>`: returns the n-th file in the queue for the specified level.
+* `/info/<path>/<to>/<dir>`: returns the config of the specified directory (its children).
 
 The possible `POST` requests are:
-
+* `/file/<game>/<category>/<level>`: adds the body of the request as a file waiting for approval in the queue of the specified level.
 
 ## Structure
 

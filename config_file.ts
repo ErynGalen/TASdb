@@ -81,14 +81,18 @@ function parseLine(line: string): ConfigLine | null {
 export function makeConfigFile(config: ConfigLine[]): string {
     let config_str = "";
     for (let line of config) {
-        config_str += makeConfigLineStr(line.id, line.is_directory, line.names) + '\n';
+        if (!line.id.endsWith('.d')) { // don't save directories automatically added
+            config_str += makeConfigLineStr(line.id, line.is_directory, line.names) + '\n';
+        }
     }
     return config_str;
 }
-function makeConfigLineStr(file: string, is_directory: boolean, names: string[]) {
-    let ret = `${is_directory ? '/' : ''}${file}`;
+function makeConfigLineStr(id: string, is_directory: boolean, names: string[]) {
+    let ret = `${is_directory ? '/' : ''}${id}`;
     for (let name of names) {
-        ret += ", " + name;
+        if (name != id) {
+            ret += ", " + name;
+        }
     }
     return ret;
 }

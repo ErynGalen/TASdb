@@ -52,6 +52,24 @@
             }
             response_elem.innerHTML = html_info;
         }
+        async function upload_file() {
+            let response_elem = document.getElementById("response");
+            let p = params();
+            let raw_response = await fetch(`file/${p.game}/${p.category}/${p.level}`, {
+                method: 'POST',
+                body: document.getElementById("new_file").value,
+            });
+
+            let response = await raw_response.json();
+            if (response.error) {
+                response_elem.innerHTML = "<strong>Error: " + "</strong>" + response.error;
+                return;
+            } else if (response.info) {
+                response_elem.innerHTML = response.info;
+                return;
+            }
+            response_elem.innerHTML = "<strong>Unexcpected: " + "</strong>" + JSON.stringify(response);
+        }
         function params() {
             return {
                 game: document.getElementById("game").value,
@@ -65,8 +83,7 @@
 
 <body>
     <h1>TAS database.</h1>
-    <h3>GET</h3>
-    <form style="width: 40ch;">
+    <form style="max-width: 40ch;">
         <div class="input-row">
             <label for="game" class="input-name">Game: </label>
             <input type="text" name="game" id="game" class="input-field">
@@ -79,16 +96,29 @@
             <label for="level" class="input-name">Level: </label>
             <input type="text" name="level" id="level" class="input-field">
         </div>
-
+        <h3 style="color: aqua;">GET</h3>
         <div>
             <input type="button" value="File" onclick="get_file();">
             <input type="button" value="Stats" onclick="get_stats();">
             <input type="button" value="Info" onclick="get_info();">
         </div>
     </form>
+
+    <form style="max-width: 77ch;">
+        <div class="input-row">
+            <label for="new_file" class="input-name">File</label>
+            <textarea name="new_file" id="new_file" cols="70" rows="4"></textarea>
+        </div>
+        <h3 style="color: aqua;">POST</h3>
+        <div>
+            <input type="button" value="Upload TAS file" onclick="upload_file();">
+        </div>
+    </form>
+
     <div>
         <pre><output id="response"></output></pre>
     </div>
+
 </body>
 
 </html>

@@ -2,8 +2,8 @@ import http from 'http';
 import fs from 'fs/promises';
 import mime from 'mime';
 
-import { getStoragePath, getBaseDir, realPath, getConfigInDir } from './database.js'
-import { ConfigLine } from './config_file.js';
+import { getStoragePath, getBaseDir, realPath, getConfigInDir, writeConfigInDir } from './database.js'
+import { ConfigLine, idFromName } from './config_file.js';
 
 const hostname = '0.0.0.0';
 const port = Number(process.env.PORT);
@@ -74,8 +74,7 @@ async function handleGet(req: http.IncomingMessage, res: http.ServerResponse) {
     }
 }
 
-// true on success
-async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boolean> {
+async function serveWebFile(res: http.ServerResponse, req_url: URL) {
     let file_name = req_url.pathname;
     if (file_name === '/' || file_name === '') {
         file_name = "/index.html";
@@ -89,7 +88,7 @@ async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boo
         res.statusCode = 404;
         res.setHeader('Content-Type', 'text/plain');
         res.end("not found: " + file_name);
-        return false;
+        return;
     }
 
     let mime_type: string | null = mime.getType(file_name);
@@ -98,7 +97,7 @@ async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boo
     }
     res.setHeader('Content-Type', mime_type);
     res.end(file);
-    return true;
+    return;
 }
 
 async function getFile(res: http.ServerResponse, path: string[]) {
@@ -166,5 +165,103 @@ async function getInfo(res: http.ServerResponse, path: string[]) {
 }
 
 async function handlePost(req: http.IncomingMessage, res: http.ServerResponse) {
+    if (req.headers['Content-Type'] && req.headers['Content-Type'] != "text/plain") {
+        res.statusCode = 415;
+        res.end(JSON.stringify({ error: "Only plain text data is accepted, got " + req.headers['Content-Type'] }));
+        return;
+    }
 
+    let req_url: URL;
+    try {
+        if (req.url) {
+            req_url = new URL(req.url, `http://${req.headers.host}`);
+        } else {
+            req_url = new URL("/", `http://${req.headers.host}`);
+        }
+    } catch (e) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: "Invalid URL: " + req.url }));
+        return;
+    }
+    let raw_path_parts: string[] = req_url.pathname.split('/');
+    let path_parts: string[] = [];
+    for (let part of raw_path_parts) {
+        if (part != '') {
+            path_parts.push(part);
+        }
+    }
+
+    let body = "";
+    req.on('data', data => { body += data; });
+    req.on('end', () => {
+        if (path_parts.length == 0) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: "A target URL must be specified" }));
+            return;
+        }
+        switch (path_parts[0]) {
+            case 'file':
+                postFile(path_parts.slice(1), res, body);
+                return;
+            default:
+                res.statusCode = 405;
+                res.end(JSON.stringify({ error: "Only /file/* can be POSTed to" }));
+                return;
+        }
+    });
+}
+
+// push the file in the queue
+async function postFile(virtual_path: string[], res: http.ServerResponse, data: string) {
+    if (virtual_path.length != 3) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: "A game, category and level name must be specified" }));
+        return;
+    }
+    virtual_path[2] += '.d'; // queue directory assiciated with the level
+    let real_path: string[];
+    let queue_config: ConfigLine[];
+    try {
+        real_path = await realPath(virtual_path);
+    } catch (e: any) {
+        if (e.status) {
+            res.statusCode = e.status;
+        } else {
+            res.statusCode = 418;
+        }
+        res.end(JSON.stringify({ error: e.error }));
+        return;
+    }
+    try {
+        // also creates the queue directory if it doesn't exist
+        queue_config = await getConfigInDir(real_path, true);
+    } catch (e: any) {
+        if (e.status) {
+            res.statusCode = e.status;
+        } else {
+            res.statusCode = 418;
+        }
+        res.end(JSON.stringify({ error: e.error }));
+        return;
+    }
+
+    let first_free: number = 0;
+    while (idFromName(queue_config, first_free.toString()) !== null) {
+        first_free += 1;
+    }
+
+    queue_config.push({ id: first_free.toString(), is_directory: false, names: [] });
+    writeConfigInDir(real_path, queue_config);
+
+    real_path.push(first_free.toString());
+    try {
+        await fs.writeFile(getStoragePath() + real_path.join('/'), data);
+    } catch (e) {
+        console.error("Error while writing level file (" + real_path.join('/') + "): " + e);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: "Error while writing level file (" + real_path.join('/') + ")" }));
+        return;
+    }
+    res.statusCode = 200;
+    res.end(JSON.stringify({ info: "Wrote " + real_path.join('/') }));
 }
