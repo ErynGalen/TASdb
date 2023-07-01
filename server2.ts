@@ -82,7 +82,7 @@ async function serveWebFile(res: http.ServerResponse, req_url: URL): Promise<boo
     catch (e) {
         res.statusCode = 404;
         res.setHeader('Content-Type', 'text/plain');
-        res.end("not found");
+        res.end("not found: " + file_name);
         return false;
     }
 
