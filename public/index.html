@@ -5,7 +5,7 @@
     <title>TASdb</title>
     <link rel="stylesheet" href="style.css">
     <script type="text/javascript">
-        async function stats() {
+        async function get_stats() {
             let response_elem = document.getElementById("response");
             let p = params();
             let response = await (await fetch(`stats/${p.game}/${p.category}/${p.level}`)).json();
@@ -15,7 +15,7 @@
             }
             response_elem.innerHTML = JSON.stringify(response);
         }
-        async function file() {
+        async function get_file() {
             let response_elem = document.getElementById("response");
             let p = params();
             let raw_response = await fetch(`file/${p.game}/${p.category}/${p.level}`);
@@ -31,6 +31,26 @@
             }
 
         }
+        async function get_info() {
+            let response_elem = document.getElementById("response");
+            let p = params();
+            let response = await (await fetch(`info/${p.game}/${p.category}/${p.level}`)).json();
+            if (response.error) {
+                response_elem.innerHTML = "<strong>Error: " + "</strong>" + response.error;
+                return;
+            }
+            let html_info = "";
+            for (let item of response) {
+                let prefix = '';
+                if (item.is_directory === true) {
+                    prefix = '/';
+                }
+                    html_info += "<strong>" + prefix + item.id + "</strong> (";
+                    html_info += item.names.join(', ');
+                    html_info += ")<br>";
+            }
+            response_elem.innerHTML = html_info;
+        }
         function params() {
             return {
                 game: document.getElementById("game").value,
@@ -44,6 +64,7 @@
 
 <body>
     <h1>TAS database.</h1>
+    <h3>GET</h3>
     <form style="width: 40ch;">
         <div class="input-row">
             <label for="game" class="input-name">Game: </label>
@@ -59,8 +80,9 @@
         </div>
 
         <div>
-            <input type="button" value="File" onclick="file();">
-            <input type="button" value="Stats" onclick="stats();">
+            <input type="button" value="File" onclick="get_file();">
+            <input type="button" value="Stats" onclick="get_stats();">
+            <input type="button" value="Info" onclick="get_info();">
         </div>
     </form>
     <pre id="response"></pre>

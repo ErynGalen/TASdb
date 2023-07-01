@@ -18,6 +18,13 @@ input {
     border-radius: 5px;
 }
 
+form {
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    border-color: lightcyan;
+}
+
 .input-field {
     float: right;
     width: 20ch;

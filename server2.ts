@@ -1,7 +1,8 @@
 import * as http from 'http';
 import * as fs from 'fs/promises'
 
-import { getStoragePath, getBaseDir, realPath } from './database.js'
+import { getStoragePath, getBaseDir, realPath, getConfigInDir } from './database.js'
+import { ConfigLine } from './config_file.js';
 
 const hostname = '0.0.0.0';
 const port = Number(process.env.PORT);
@@ -61,6 +62,9 @@ async function handleGet(req: http.IncomingMessage, res: http.ServerResponse) {
             return;
         case 'stats':
             getStats(res, path_parts.slice(1));
+            return;
+        case 'info':
+            getInfo(res, path_parts.slice(1));
             return;
         default:
             serveWebFile(res, req_url);
@@ -131,4 +135,33 @@ async function getStats(res: http.ServerResponse, path: string[]) {
     res.statusCode = 200;
     res.end(JSON.stringify({ info: "No stats" }));
     return;
+}
+
+async function getInfo(res: http.ServerResponse, path: string[]) {
+    let file_path: string[];
+    try {
+        file_path = await realPath(path);
+    } catch (e: any) {
+        if (e.status) {
+            res.statusCode = e.status;
+        } else {
+            res.statusCode = 418;
+        }
+        res.end(JSON.stringify({ error: e.error }));
+        return;
+    }
+    let config: ConfigLine[];
+    try {
+        config = await getConfigInDir(file_path);
+    } catch (e: any) {
+        if (e.status) {
+            res.statusCode = e.status;
+        } else {
+            res.statusCode = 418;
+        }
+        res.end(JSON.stringify({ error: e.error }));
+        return;
+    }
+    res.statusCode = 200;
+    res.end(JSON.stringify(config));
 }
