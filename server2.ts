@@ -3,12 +3,12 @@ import * as fs from 'fs/promises'
 
 import { getStoragePath, getBaseDir, realPath } from './database.js'
 
-const hostname = '127.0.0.1';
+const hostname = '0.0.0.0';
 const port = 80;
 
 const server = http.createServer(requestHandler);
 
-server.listen(port, function () {
+server.listen(port, hostname, function () {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
 
