@@ -7,7 +7,7 @@ A database for tas files.
 The server is built by `npm run build`.
 
 The server is run with `npm run start`.
-It exposes an HTTP interface at `http://localhost:7878/`.
+It exposes an HTTP interface at `http://localhost:80/`.
 
 ### Requests
 The database respond to requests with JSON data.
