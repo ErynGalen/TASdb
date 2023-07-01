@@ -4,7 +4,7 @@ import * as fs from 'fs/promises'
 import { getStoragePath, getBaseDir, realPath } from './database.js'
 
 const hostname = '0.0.0.0';
-const port = 80;
+const port = Number(process.env.PORT);
 
 const server = http.createServer(requestHandler);
 
